@@ -35,14 +35,16 @@ but actually they are not errors just subprocesses that run on command line
 """
 
 numarp=0 #number of arp packets detected on network
-
+hosts=[]
 #region FUNCTIONS
 
 """
 Author: Aline Challita
 Function is tested
 """
-def scanNetwork(ip):
+
+#Authors: Aline for oneMac=False; Edmond for oneMac=True
+def getMacs(ip, oneMac=True):
     """
     --------------Function Description--------------- 
     Scans the LAN network for available hosts:
@@ -69,39 +71,37 @@ def scanNetwork(ip):
     #the IP address is stored in psrc variable
     #and the MAC address is stored in hwsrc variable
     #Store these values in a list of hosts
-    hosts = []
-    for sent_packet,received_packet in answered_packets:
-        hosts.append({'ip': received_packet.psrc, 'mac': received_packet.hwsrc})
+    
+    if(oneMac):
+        try:
+            mac= answered_packets[0][1].hwsrc #mac location in packet
+            # print(mac)
+            return mac
+        except: #IndexError:
+            #maybe fake IP or firewall (Apple devices) is blocking packets
+            # print('No Mac found for',ip)
+            return None
+    else:
+        print("Your Network:")
+        for sent_packet,received_packet in answered_packets:
+            hosts.append({'ip': received_packet.psrc, 'mac': received_packet.hwsrc})
 
-    #print ARP table that contains available hosts on the network
-    print("-----------------------------------\nIP Address\tMAC Address\n-----------------------------------")
-    for host in hosts:
-        print("{}\t{}".format(host['ip'], host['mac']))
+        #print ARP table that contains available hosts on the network
+        print("-----------------------------------\nIP Address\tMAC Address\n-----------------------------------")
+        for host in hosts:
+            print("{}\t{}".format(host['ip'], host['mac']))
+    
 
 #Aline
 #Todo: iterate over arp table from above function
 #to check for duplicate mac addresses
 #if duplicates exist, then one of them is spoofed
 
+
 #Author: Edmond Samaha
 def getArpTable():
     command = ['arp', '-a']
-    subprocess.call(command)
-
-
-#Author: Edmond Samaha
-def getMac(ip): #WORKS #can also use getmacbyip(ip) which is specific to Scapy
-    p = Ether(dst='ff:ff:ff:ff:ff:ff')/ARP(pdst=ip) #Create arp packet with dst=dest_broadcast and pdst=ip_target
-    result = srp(p, timeout=3, verbose=False)[0] #Send created packet above over network
-    try:
-        mac= result[0][1].hwsrc #mac location in packet
-        # print(mac)
-        return mac
-    except: #IndexError:
-        #maybe fake IP or firewall (Apple devices) is blocking packets
-        # print('No Mac found for',ip)
-        return None
-   
+    subprocess.call(command)    
 
 #Author: Edmond Samaha
 def checkMac(packet): #used with sniff() which is a Scapy specific function 
@@ -112,7 +112,7 @@ def checkMac(packet): #used with sniff() which is a Scapy specific function
         if packet[ARP].op == 2: #check ARP replies (op=2)
             try:
                 ip =packet[ARP].psrc
-                real_mac = getMac(ip) # get the real MAC address of the sender
+                real_mac = getMacs(ip) # get the real MAC address of the sender
                 if(real_mac==None):
                     print("[*] No MAC found for",ip)
                     return
@@ -144,15 +144,17 @@ def Detect(duration=10):
     print('\nStoped. Time taken:', datetime.now()-start_time)
 #endregion
 
-#Authors: Aline and Edmond
 #RUN HERE
 if __name__ == "__main__":
     
+    #region Author: Aline
     #prompt user to input target IP of router with subnet mask
     target_ip =  input("Enter Target IP: ")
-    print("Your Network:")
-    scanNetwork(target_ip)
+    getMacs(target_ip, False)
 
+    #endregion
+
+    #region Author: Edmond
     print('\nYour current ARP table:',end='')
     getArpTable()
 
@@ -167,4 +169,5 @@ if __name__ == "__main__":
             duration=input("Please enter an integer: ")
     # print(duration)
     Detect(duration)
+    #endregion
    
