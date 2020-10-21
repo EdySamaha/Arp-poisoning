@@ -1,3 +1,30 @@
+"""
+EECE 655 Assignment 2 - Fall 20-21
+October 23, 2020
+This code implements a detector for an ARP cache poisoning attack.
+
+--------------------Two Defense Strategies-------------------------
+
+               -----------Strategy 1-----------
+Get ARP table of all hosts and check for duplicate MAC addresses.
+If duplicates exits, then one of the MAC addresses is spoofed.
+
+              ------------Strategy 2-----------
+Sniff the network for ARP replies.
+Upon reading a reply, the detector reads the source MAC address.
+Let's call it MAC_address_suspicious.
+The detector then sends an arp request to the sender.
+The sender replies back with its MAC address.
+Let's call it MAC_address_sender.
+If MAC_address suspicious and MAC_address_sender are equal, 
+then no attack is detected.
+Else, MAC_address_suspicious is spoofed. Attack is detected
+-------------------------------------------------------------------
+
+Developed by: Aline Challita & Edmond Samaha
+NOTE: The author of each function is indicated before the start of each function.
+"""
+
 import os, platform, subprocess, threading
 from datetime import datetime
 from scapy.all import *
@@ -6,37 +33,63 @@ from scapy.all import *
 NOTE: Some Scapy specific funtions may show up as errors/undefined in editors
 but actually they are not errors just subprocesses that run on command line
 """
+
 numarp=0 #number of arp packets detected on network
+
 #region FUNCTIONS
-def ping(host):
-    """
-    Returns True if host (str) responds to a ping request.
-    Remember that a host may not respond to a ping (ICMP) request even if the host name is valid.
-    """
-    # Packet options as a function of OS: Windows/Unix
-    num_packets = '-n' if platform.system().lower()=='windows' else '-c' #-n/-c packet number
-    size_packets= '-l' if platform.system().lower()=='windows' else '-s' #-l/-s byte size
-    # Building the command. Ex: "ping -c 1 google.com"
-    command = ['ping', num_packets,'1',size_packets,'1', host]
-    
-    rstatus, response_ip= subprocess.getstatusoutput(command)     #rstatus= subprocess.call(command)
-    response_ip = re.search('Reply from (.*):', response_ip).group(1)
-    print(rstatus, response_ip)
-    if(rstatus==0 and response_ip==host): #avoid another ip responding with target unreachable
-        return True
-    else:
-        return False
 
-def getNetworkIPs():
-    for i in range(0,256):
-        ip=prefix+str(i) #still working on this: idea is getting the prefix of router to scan the network
-    if(ping(ip)):
-        print(ip,getMac(ip))
+"""
+Author: Aline Challita
+Function is tested
+"""
+def scanNetwork(ip):
+    """
+    --------------Function Description--------------- 
+    Scans the LAN network for available hosts:
+    *create an ARP request for target IP address
+    *create a broadcast ethernet frame
+    *put arp request inside the ethernet frame
+    *send the arp request frame
+    *receive response
+    *parse IP and MAC addresses from response
+    *print ARP table of available hosts on the network
+    -------------------------------------------------
+    """
+    arp = ARP(pdst=ip)                      #create an ARP packet where pdst is dest IP 
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")  #create ethernet frame with broadcast dest MAC address
+    arp_broadcast_packet = ether/arp        #append arp packet inside ethernet frame
 
+    #Now we use the srp function in scapy to send and receive packets.
+    #srp returns 2 types of packets.
+    #They are the answered packets and unanswered packets.
+    #We only care about answered packets 
+    answered_packets = srp(arp_broadcast_packet, timeout=3, verbose=0)[0]
+
+    #In each packet in the answered_packets list,
+    #the IP address is stored in psrc variable
+    #and the MAC address is stored in hwsrc variable
+    #Store these values in a list of hosts
+    hosts = []
+    for sent_packet,received_packet in answered_packets:
+        hosts.append({'ip': received_packet.psrc, 'mac': received_packet.hwsrc})
+
+    #print ARP table that contains available hosts on the network
+    print("-----------------------------------\nIP Address\tMAC Address\n-----------------------------------")
+    for host in hosts:
+        print("{}\t{}".format(host['ip'], host['mac']))
+
+#Aline
+#Todo: iterate over arp table from above function
+#to check for duplicate mac addresses
+#if duplicates exist, then one of them is spoofed
+
+#Author: Edmond Samaha
 def getArpTable():
     command = ['arp', '-a']
     subprocess.call(command)
 
+
+#Author: Edmond Samaha
 def getMac(ip): #WORKS #can also use getmacbyip(ip) which is specific to Scapy
     p = Ether(dst='ff:ff:ff:ff:ff:ff')/ARP(pdst=ip) #Create arp packet with dst=dest_broadcast and pdst=ip_target
     result = srp(p, timeout=3, verbose=False)[0] #Send created packet above over network
@@ -48,7 +101,9 @@ def getMac(ip): #WORKS #can also use getmacbyip(ip) which is specific to Scapy
         #maybe fake IP or firewall (Apple devices) is blocking packets
         # print('No Mac found for',ip)
         return None
-    
+   
+
+#Author: Edmond Samaha
 def checkMac(packet): #used with sniff() which is a Scapy specific function 
      global numarp
      if packet.haslayer(ARP): # if it is an ARP response (ARP reply)
@@ -67,6 +122,7 @@ def checkMac(packet): #used with sniff() which is a Scapy specific function
             except:
                 print("Couldn't check MAC of",ip)
 
+#Author: Edmond Samaha
 def Detect(duration=10):
     start_time=datetime.now()
     print("Started at",start_time)
@@ -88,10 +144,15 @@ def Detect(duration=10):
     print('\nStoped. Time taken:', datetime.now()-start_time)
 #endregion
 
+#Authors: Aline and Edmond
 #RUN HERE
 if __name__ == "__main__":
-    # print('Your network:')
-    # getNetworkIPs()
+    
+    #prompt user to input target IP of router with subnet mask
+    target_ip =  input("Enter Target IP: ")
+    print("Your Network:")
+    scanNetwork(target_ip)
+
     print('\nYour current ARP table:',end='')
     getArpTable()
 
