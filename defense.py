@@ -7,7 +7,7 @@ This code implements a detector for an ARP cache poisoning attack.
 
                -----------Strategy 1-----------
 Get ARP table of all hosts and check for duplicate MAC addresses.
-If duplicates exits, then one of the MAC addresses is spoofed.
+If duplicates exits, then one or more MAC addresses are spoofed.
 
               ------------Strategy 2-----------
 Sniff the network for ARP replies.
@@ -35,15 +35,13 @@ but actually they are not errors just subprocesses that run on command line
 """
 
 numarp=0 #number of arp packets detected on network
-hosts=[]
+
 #region FUNCTIONS
 
 """
-Author: Aline Challita
+Authors: Aline for oneMac=False; Edmond for oneMac=True
 Function is tested
 """
-
-#Authors: Aline for oneMac=False; Edmond for oneMac=True
 def getMacs(ip, oneMac=True):
     """
     --------------Function Description--------------- 
@@ -82,7 +80,8 @@ def getMacs(ip, oneMac=True):
             # print('No Mac found for',ip)
             return None
     else:
-        print("Your Network:")
+        print("\nYour Network:")
+        hosts = []
         for sent_packet,received_packet in answered_packets:
             hosts.append({'ip': received_packet.psrc, 'mac': received_packet.hwsrc})
 
@@ -90,12 +89,49 @@ def getMacs(ip, oneMac=True):
         print("-----------------------------------\nIP Address\tMAC Address\n-----------------------------------")
         for host in hosts:
             print("{}\t{}".format(host['ip'], host['mac']))
+        return(hosts)
     
+"""
+Author: Aline Challita
+Function is tested
+"""
+def checkForDuplicateMacs(entries):
+    """
+    ----------------Function Description------------------------
+    This function tests for duplicate MAC addresses in the table
+    of IP-MAC bindings of all the hosts on the network.
+    Since MAC addresses are unique,
+    then if identical MAC addresses are found in the table,
+    ARP cache poisoning is detected
+    ------------------------------------------------------------ 
+    """
+    macarr = []                         #initialize empty array to store MAC addresses
+    for entry in entries:
+        macarr.append(entry['mac'])     #Fill MAC array with MAC entries from the table
 
-#Aline
-#Todo: iterate over arp table from above function
-#to check for duplicate mac addresses
-#if duplicates exist, then one of them is spoofed
+    print("\nThe MAC entries in the table are:\n",macarr)
+    print("\nInitiated testing for identical MAC addresses in table of IP-MAC bindings.") 
+    
+    d = {}                              #initialize empty dictionary
+    dup_count = 0                       #initialize counter for duplicates
+    
+    #The dictionary stores each MAC address and its count
+    #When a duplicate MAC address is encountered,
+    #increase its count in the dictionary
+    for mac in macarr:
+        if (mac in d):
+            d[mac]+=1
+            dup_count+=1
+        else:
+            d[mac]=1
+
+    if (dup_count == 0):
+        print("No duplicate MAC addresses detected.")
+    else:
+        print("Warning! Identical MAC addresses have been detected in the table.")
+        print("There might be an ARP cache poisoning attack on the network!")
+        duplicates = dict((k, v) for k, v in d.items() if v > 1)
+        print (duplicates)
 
 
 #Author: Edmond Samaha
@@ -141,7 +177,7 @@ def Detect(duration=10):
     # print('Results:\n',t.results) #store=False so no output + no need
     print(numarp,'ARP packets were detected')
 
-    print('\nStoped. Time taken:', datetime.now()-start_time)
+    print('\nStopped. Time taken:', datetime.now()-start_time)
 #endregion
 
 #RUN HERE
@@ -150,8 +186,8 @@ if __name__ == "__main__":
     #region Author: Aline
     #prompt user to input target IP of router with subnet mask
     target_ip =  input("Enter Target IP: ")
-    getMacs(target_ip, False)
-
+    IP_MAC_entries = getMacs(target_ip,False)
+    checkForDuplicateMacs(IP_MAC_entries)
     #endregion
 
     #region Author: Edmond
