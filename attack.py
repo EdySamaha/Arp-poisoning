@@ -1,3 +1,11 @@
+# REFERENCES: 
+# https://scapy.readthedocs.io/en/latest/
+# https://docs.python.org/3/library/winreg.html
+# https://stackoverflow.com/questions/15128225/python-script-to-read-and-write-a-path-to-registry
+# https://serverfault.com/questions/97117/how-do-i-enable-ip-forwarding-in-macos-x
+# https://serverfault.com/questions/929081/how-can-i-enable-packet-forwarding-on-windows#:~:text=Try%20to%20go%20to%20the,forwarding%20should%20now%20be%20enabled.
+# https://thepacketgeek.com/scapy/building-network-tools/part-05/
+# 
 # IMPORTANT: MUST BE RUN AS ROOT
 
 # IMPORTANT MODULES:
