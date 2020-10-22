@@ -13,13 +13,13 @@ To test this project, first run the Defense script and set it to sniff for a hig
 ## Attack
 Script that sends fake arp packets to victims in order to change their ip-arp relations to the attacker's machine (arp).
 
-Run the script in your console by writing `python attack.py`
+Run the script in your console by writing `python3 attack.py`
 Then input the required parameters
 
 ## Defense
 Script to sniff the network, collect arp states, and inform the user in case a suspected arp spoofing attack was detected.
 
-Run the script in your console by writing `python defense.py`
+Run the script in your console by writing `python3 defense.py`
 Then input the required parameters
 
 
