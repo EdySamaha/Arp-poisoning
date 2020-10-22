@@ -10,10 +10,8 @@
 
 # IMPORTANT MODULES:
 from scapy.all import Ether, ARP, srp, send
-import argparse
 import time
 import os
-import sys
 
 
 # IMPORT REGISTRY TOOL FOR WINDOWS
@@ -48,7 +46,7 @@ def _enable_windows_ipforwarding():
         winreg.CreateKey(winreg.HKEY_CURRENT_USER, REG_PATH)
         registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_PATH, 0, 
                                        winreg.KEY_WRITE)
-        winreg.SetValueEx(registry_key, name, 0, winreg.REG_SZ, value)
+        winreg.SetValueEx(registry_key, name, 0, winreg.REG_DWORD, value)
         winreg.CloseKey(registry_key)
         return True
     except WindowsError:
