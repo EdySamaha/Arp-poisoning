@@ -1,4 +1,8 @@
 """
+References:
+https://scapy.readthedocs.io/en/latest/
+https://www.geeksforgeeks.org/network-scanning-using-scapy-module-python/?ref=rp
+
 EECE 655 Assignment 2 - Fall 20-21
 October 23, 2020
 This code implements a detector for an ARP cache poisoning attack.
